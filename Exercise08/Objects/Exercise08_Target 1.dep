@@ -1,0 +1,5 @@
+Dependencies for Project 'Exercise08', Target 'Target 1': (DO NOT MODIFY !)
+F (.\Exercise08.s)(0x635DCEC4)(--cpu Cortex-M0+ --pd "__EVAL SETA 1" -g --apcs=interwork -I.\RTE\_Target_1-IC:\Keil_v5\ARM\PACK\Keil\Kinetis_KLxx_DFP\1.15.0\Device\Include-IC:\Keil_v5\ARM\CMSIS\Include--pd "__UVISION_VERSION SETA 524" --pd "MKL05Z32xxx4 SETA 1"--list .\listings\exercise08.lst --xref --length 49 --width 129 -o .\objects\exercise08.o --depend .\objects\exercise08.d)
+I (MKL05Z4.s)(0x633489BC)
+F (.\Start.s)(0x6334886E)(--cpu Cortex-M0+ --pd "__EVAL SETA 1" -g --apcs=interwork -I.\RTE\_Target_1-IC:\Keil_v5\ARM\PACK\Keil\Kinetis_KLxx_DFP\1.15.0\Device\Include-IC:\Keil_v5\ARM\CMSIS\Include--pd "__UVISION_VERSION SETA 524" --pd "MKL05Z32xxx4 SETA 1"--list .\listings\start.lst --xref --length 49 --width 129 -o .\objects\start.o --depend .\objects\start.d)
+I (MKL05Z4.s)(0x633489BC)

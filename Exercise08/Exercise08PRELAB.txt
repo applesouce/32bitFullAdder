@@ -1,0 +1,144 @@
+AddIntMultiU   PROC {R0-R14}
+;**********************************************************
+; R2, and R1 has the address of R3-words in memory and Store the Results in the address (in R0)
+; C bit is clear if succesfull C bit is set if the subroutine failed
+; Input: R0 - Address to Store: R1 - The word(s) start Address : R2 - The word(s) Start Address
+; Output: N/A
+; Modify: APSR
+; All other registers remain unchanged on return
+;**********************************************************
+    ; R0 the base address to store the values
+	; R1 the base address of the first value
+	; R2 the base address of the second value
+	; R3 the Number of words
+	; R4 the counter to load new values
+	; R5 the value of the first  word (+R4 position)
+	; R6 the value of the second word (+R4 position)
+	; R7 Saves the C bit and loads the C bit
+    PUSH {R0-R7}
+    
+    MRS  	R5, APSR   		   ;CLEAR THE C FLAG
+    MOVS 	R6,#0x20
+    LSLS 	R6,R6,#24
+    BICS 	R5,R5,R6
+    MSR  	APSR, R6           ;CLEAR THE C FLAG
+    MRS     R7,APSR            ; LOAD the C bit       
+	
+	MOVS R4,#0      ; Intialize the Counter (used to displacement addressing)
+	
+AA  LDR  R5,[R1,R4] ; loads the first word value with  address from R2
+    LDR  R6,[R1,R4] ; loads the first word value with  address from R3
+	MSR  APSR,R7     ; LOAD the C bit
+    ADCS R5,R6      ; after adding the words using ADCS
+	MRS R7, APSR    ; Saves the C bit
+	STR  R5,[R0,R4] ; store the new value
+    ADDS R4,R4,#8   ; Increment the value R4 by 8
+	SUBS R3,R3,#1   ; Decrement N
+	CMP R3,#0       ; do while N > 0
+	BLE AA          ; AA being Add Again when R3 > 0
+	
+	BVS OverFlowSet ; After done adding check if over flow to determine whether to clear or set the c bit
+	MRS  	R5, APSR; CLEAR THE C FLAG 
+    MOVS 	R6,#0x20
+    LSLS 	R6,R6,#24
+    BICS 	R5,R5,R6
+    MSR  	APSR, R6; CLEAR THE C FLAG
+	B SkipToEnd
+OverFlowSet 
+	MRS 	R3, APSR; SETING THE C FLAG
+	MOVS 	R4, #0x20			          
+	LSLS 	R4,R4, #24
+	ORRS 	R3,R3,R4
+	MSR  	APSR, R3; SETTING THE C FLAG
+SkipToEnd           ; This branch is used when the C bit is cleared
+	BX LR
+    POP {R0-R7}
+	ENDP
+
+
+
+GetHexIntMulti   PROC {R0-R14}
+;**********************************************************
+; Ask the User to input a character and Converts them
+; Input: R0 - Address to Store of &Num64: R1 - The Number of Words
+; Output: N/A
+; Modify: APSR
+; All other registers remain unchanged on return
+;**********************************************************    
+
+    ; R0 Address of the String
+	; R1 the N words
+	; R2 copy of the Address of the String used for packing
+	; R3 Copy of N
+	
+    PUSH{R0-R4,LR}
+;****Calling the GETSTRING SB******************************
+
+	; Multiply R1 by 8 and then add 1
+	MOVS R3,R1      ; Used as a counter for the mutiplication
+multN	
+    ADDS R1,R1,#8   ; Adds 8, should do this N times (n = value of R1)
+	SUBS R3,R3,#1   ; Decrement the counter
+    CMP  R3,#0      ; Add 8 if R3 >0
+    BHI  multN	    ; Add 8 if R3 > 0
+	ADDS R1,R1,#1   ; To have 8*N +1 (8*N calculated above)
+    ; Multiply R1 by 8 and then add 1	
+    BL GetStringSB  ; Ask for User to type out the N words of digits
+
+;****Convert ASCII codes to hex digit values***************
+    
+keepConverting
+    LDRB R3,[R0,R2]  ; Look at the Address of the value in memory, IS IT LDR OR LDRB
+	CMP  R3, #0      ; Used to check if value is NULL
+	BLS  dontSub
+    CMP R3, #41	     ; Need to Check if the ASCII is 41 > , then the value needs to be subs by 31
+	BHS asciiIsALetter
+    SUBS R3,R3,#30   ; subtract every value by 30 to CONVERT the Value from ascii to hex decimal decimal till the end of the null pointer
+	B skipAscii
+asciiIsALetter
+    SUBS R3,R3,#31   ; ONLY perform this subtraction if the ascii character is A,B,C,D,E,F as the Hex a decimal is postion differently
+skipAscii
+    STRB R3,[R0,R2]  ; Store the new value
+	B keepConverting
+dontSub
+
+; Using R1 as the pointer towards the end of memory ()
+
+;****Pack hex digit values into 4 ? n byte values of Num64 in little endian order
+                    ; Start at the end of memory
+	SUBS R1,#1
+keepStoring
+    LDRB R3,[R0,R1] ; Get the Value at the end       (V1)        - DOUBLE CHECK IF IT'S STORING NULL 
+	SUBS R1,#2      ; Used to get V2
+    LDRB R4,[R0,R1] ; Get the Value at the end - 1   (V2)
+    LSLS R4, #1     ; Shift the V2 by 1 left - CHECK THIS
+    ADDS R4,R4,R3   ; Add the V2 to V1            - This enables V2 = A0 (0A before shift) and V2 0D to add together to form (AD)
+	SUBS R1,#2      ; Decrements to get the Next V1 value
+    CMP  R1, #0
+	BGE  keepStoring ; Do while (R1 > 0)
+
+    POP{R0-R4,PC}
+    BX LR 
+    ENDP
+
+
+PutHexIntMulti   PROC {R0-R14}
+;**********************************************************
+; This will inpack the hexdecimal number and print out the 
+; Input: R0 - Address to Store of &Num64: R1 - The Number of Words
+; Output: N/A
+; Modify: APSR
+; All other registers remain unchanged on return
+;**********************************************************   
+    PUSH {R0-R2,LR}
+    MOVS R2,R0
+printOtherWord
+    LDR  R0, [R2,R1]
+    BL   PutNumHex
+	SUBS R1,#1
+	CMP  R1,#0
+	BHI  printOtherWord
+	POP {R0-R2,PC}
+    BX LR 
+    ENDP
+
